@@ -422,7 +422,7 @@
     tbody.innerHTML = '';
 
     if (!state.events.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--admin-muted);">No events found. Click "+ Add Event" above to create one.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--admin-muted);">No events found. Click "ADD NEW EVENT" above to create one.</td></tr>';
       return;
     }
 
@@ -434,7 +434,9 @@
       var statusText = e.published ? 'Published' : 'Draft';
 
       tr.innerHTML =
-        '<td data-label="Event Title"><strong>' + escapeHtml(e.title_en) + '</strong><br><small style="color:var(--admin-muted);">' + escapeHtml(e.title_ta || '') + '</small></td>' +
+        '<td data-label="Event Title"><strong>' + escapeHtml(e.title_en) + '</strong>' +
+          (e.header_subtitle ? '<br><small style="color:var(--admin-muted);">' + escapeHtml(e.header_subtitle) + '</small>' : '') +
+          '<br><small style="color:var(--admin-muted);">' + escapeHtml(e.title_ta || '') + '</small></td>' +
         '<td data-label="Schedule">' + (e.is_recurring ? '<span class="status-pill active" style="margin-right:6px;">Recurring</span>' : '') + escapeHtml(dateText) + '</td>' +
         '<td data-label="Location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px;margin-right:4px;vertical-align:-1px;color:var(--admin-maroon);"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>' + escapeHtml(locText) + '</td>' +
         '<td data-label="Status"><span class="status-pill ' + statusClass + '">' + statusText + '</span></td>' +
@@ -469,8 +471,11 @@
         document.getElementById('eventSlug').value = item.slug || '';
         document.getElementById('eventTitleEn').value = item.title_en || '';
         document.getElementById('eventTitleTa').value = item.title_ta || '';
+        document.getElementById('eventHeaderSubtitle').value = item.header_subtitle || '';
+        document.getElementById('eventDisplayStructure').value = item.display_structure || 'title-only';
         document.getElementById('eventDescEn').value = item.description_en || '';
         document.getElementById('eventDescTa').value = item.description_ta || '';
+        document.getElementById('eventDescriptionVisible').checked = item.description_visible !== false;
         document.getElementById('eventIsRecurring').checked = !!item.is_recurring;
         document.getElementById('eventRecurrenceRule').value = item.recurrence_rule || '';
         document.getElementById('eventStartDate').value = item.start_date || '';
@@ -514,8 +519,11 @@
       slug: slug,
       title_en: titleEn,
       title_ta: titleTa,
+      header_subtitle: document.getElementById('eventHeaderSubtitle').value.trim(),
+      display_structure: document.getElementById('eventDisplayStructure').value,
       description_en: document.getElementById('eventDescEn').value.trim(),
       description_ta: document.getElementById('eventDescTa').value.trim(),
+      description_visible: document.getElementById('eventDescriptionVisible').checked,
       is_recurring: isRecurring,
       recurrence_rule: isRecurring ? document.getElementById('eventRecurrenceRule').value.trim() : null,
       start_date: isRecurring ? null : (document.getElementById('eventStartDate').value || null),
@@ -557,7 +565,7 @@
   }
 
   async function deleteEvent(id) {
-    if (!confirm('Are you sure you want to delete this event?\n\nThis will remove it from the public website automatically.')) return;
+    if (!confirm('Are you sure you want to delete this event?')) return;
 
     var client = getClient();
     if (!client) return;

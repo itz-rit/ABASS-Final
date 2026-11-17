@@ -14,7 +14,7 @@
   --saffron:#D98B3A;
   --kaavi:#F5D2A0;
   --kaavi-soft:#FBE6C8;
-  --maroon:#7C2331;
+  --maroon:#F97316;
   --cream:#FBE6C8;
   --cream-2:#F6D9AE;
   --paper:#FFF7EC;
@@ -145,7 +145,7 @@ body.lang-ta .header-actions > .btn{ padding:9px 12px; font-size:12.5px; }
 }
 .header-actions > .btn{ padding:9px 8px; font-size:14px; }
 .btn-primary{ background:var(--maroon); color:var(--cream); }
-.btn-primary:hover{ background:#631A26; }
+.btn-primary:hover{ background:#8F4128; }
 .btn-gold{ background:var(--gold); color:var(--navy-deep); }
 .btn-gold:hover{ background:var(--gold-soft); }
 .btn-outline{ border:1.5px solid var(--navy); color:var(--navy); background:transparent; }
@@ -915,7 +915,7 @@ body.lang-ta .lightbox-title{ font-family:'Noto Serif Tamil',serif; }
 }
 .lightbox-btn:hover{
   background:var(--maroon); border-color:var(--gold); transform:translateY(-50%) scale(1.1);
-  color:#fff; box-shadow:0 8px 24px rgba(124,35,49,0.5);
+  color:#fff; box-shadow:0 8px 24px rgba(249,115,22,0.5);
 }
 .lightbox-btn.prev{ left:20px; }
 .lightbox-btn.next{ right:20px; }
@@ -1447,26 +1447,26 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 .event-cards-grid .event-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow); border-color:var(--gold); }
 .event-date-badge{
   background:var(--maroon); color:var(--cream); padding:16px 20px; display:flex; flex-direction:column;
-  align-items:flex-start; gap:2px;
+  align-items:flex-start; gap:2px; min-height:85.2px;
 }
 .event-date-badge .day{ font-size:20px; font-weight:700; font-family:'Cinzel',serif; }
 .event-date-badge .month{ font-size:12px; letter-spacing:0.06em; text-transform:uppercase; opacity:0.9; }
+.event-date-badge .day.event-header-title{ text-transform:uppercase; font-size:clamp(15px,1.37vw,20px); line-height:1.2; overflow-wrap:anywhere; }
+.event-date-badge .month:empty{ min-height:1.6em; }
 .event-body{ padding:20px; display:flex; flex-direction:column; gap:10px; }
 .event-body h3{ font-size:17px; color:var(--navy); line-height:1.35; }
 .event-body .event-location{ font-size:12px; font-weight:600; color:var(--maroon); display:inline-flex; align-items:center; gap:5px; margin-top:-4px; }
 .event-body .event-location svg{ width:13px; height:13px; flex:none; }
+.event-details-row{ display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
 .event-body .event-desc{ font-size:13.5px; color:var(--muted); line-height:1.55; }
 
 /* ============ CONTRIBUTION SECTION ============ */
 .contribution-grid{ display:grid; grid-template-columns:0.9fr 1.3fr; gap:36px; align-items:start; }
 .contribution-qr{ display:flex; justify-content:center; }
-.qr-placeholder{
-  width:100%; max-width:260px; aspect-ratio:1/1; border:2px dashed var(--gold);
-  border-radius:14px; background:var(--paper); display:flex; flex-direction:column;
-  align-items:center; justify-content:center; text-align:center; gap:8px; padding:20px;
-  color:var(--muted-2); font-weight:600; font-size:14px;
+.payment-qr-image{
+  display:block; width:100%; max-width:260px; aspect-ratio:1/1;
+  object-fit:contain; border-radius:14px;
 }
-.qr-placeholder small{ font-weight:400; font-size:11.5px; color:var(--muted); }
 .contribution-form-wrap{ background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:26px; }
 .contribution-form-wrap select{
   width:100%; padding:12px 14px; border-radius:8px; border:1px solid var(--line);
@@ -1490,8 +1490,8 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 /* ============ LEADERSHIP (FEATURED OFFICE-BEARER) CARDS ============ */
 .trustee-list-lead{ grid-template-columns:1fr; gap:10px; margin-bottom:8px; }
 .trustee-card-lead{
-  background:linear-gradient(120deg, var(--maroon) 0%, #9C3348 100%);
-  border:1px solid var(--maroon); box-shadow:0 10px 26px -12px rgba(124,35,49,0.55);
+  background:linear-gradient(120deg, var(--maroon) 0%, #FB923C 100%);
+  border:1px solid var(--maroon); box-shadow:0 10px 26px -12px rgba(249,115,22,0.55);
   padding:18px 22px; transform:scale(1.02);
 }
 .trustee-card-lead .avatar{

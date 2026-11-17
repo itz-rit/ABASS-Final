@@ -42,63 +42,19 @@
 
 
 /* ============ SEVA SANKALPAM — UPCOMING EVENTS ONLY ============
-   The list below mirrors the "Upcoming Events" on events.html.
+   The event list is loaded from the shared Supabase events table.
    - No donation amounts are shown or collected here; submitting the form
      just shows an on-page thank-you confirmation — nothing is sent
      automatically. A Trustee follows up directly with the devotee to
      confirm the sankalpam and share the official bank / UPI information.
    - `until` (YYYY-MM-DD, inclusive) hides an event automatically once its
      last day has passed. Recurring events have no `until`.
-   To add or change an event, edit the SEVAS array (and events.html).
    ================================================================== */
 (function(){
   var form = document.querySelector('[data-seva-form]');
   if(!form) return;
 
-  var SEVAS = [
-    {
-      id:'annadhaanam',
-      en:'Monthly Annadhaanam', ta:'மாதாந்திர அன்னதானம்',
-      whenEn:'Every 2nd Saturday', whenTa:'ஒவ்வொரு மாத 2வது சனி',
-      locationEn:'Pallavaram, Chennai', locationTa:'பல்லாவரம், சென்னை',
-      descEn:'Free meal offering for a minimum of 250 persons, held every Second Saturday of the month.',
-      descTa:'ஒவ்வொரு மாத இரண்டாவது சனிக்கிழமையும் குறைந்தது 250 பேருக்கு இலவச அன்னதானம்.'
-    },
-    {
-      id:'kumbabhishekam', until:'2026-10-30',
-      en:'Pallavaram Bharathi Nagar Pillayar Koil Kumbabhishekam Annadhaanam',
-      ta:'பல்லாவரம் பாரதி நகர் பிள்ளையார் கோவில் கும்பாபிஷேகம் அன்னதானம்',
-      whenEn:'27–30 Oct 2026', whenTa:'27–30 அக் 2026',
-      locationEn:'Pallavaram, Chennai', locationTa:'பல்லாவரம், சென்னை',
-      descEn:'Annadhaanam in connection with the Kumbabhishekam at Bharathi Nagar Pillayar Koil, Pallavaram, from 27th to 30th October 2026.',
-      descTa:'27 முதல் 30 அக்டோபர் 2026 வரை பல்லாவரம் பாரதி நகர் பிள்ளையார் கோவில் கும்பாபிஷேகத்தின் போது அன்னதானம்.'
-    },
-    {
-      id:'padi', until:'2026-12-12',
-      en:'Yearly Padi Pooja', ta:'ஆண்டு படி பூஜை',
-      whenEn:'12 Dec 2026', whenTa:'12 டிச 2026',
-      locationEn:'Zamin Pallavaram, Chennai', locationTa:'ஜமீன் பல்லாவரம், சென்னை',
-      descEn:'Annual 18 Padi Pooja observed on 12th December 2026.',
-      descTa:'12 டிசம்பர் 2026 அன்று ஆண்டு 18 படி பூஜை நடைபெறும்.'
-    },
-    {
-      id:'vilakku', until:'2026-12-19',
-      en:'Yearly Vilakku Pooja', ta:'ஆண்டு விளக்கு பூஜை',
-      whenEn:'19 Dec 2026', whenTa:'19 டிச 2026',
-      locationEn:'Zamin Pallavaram, Chennai', locationTa:'ஜமீன் பல்லாவரம், சென்னை',
-      descEn:'Annual Thiru Vilakku Pooja observed on 19th December 2026.',
-      descTa:'19 டிசம்பர் 2026 அன்று ஆண்டு திருவிளக்கு பூஜை நடைபெறும்.'
-    }
-  ];
-
-  /* keep only events that have not finished yet */
-  function todayStr(){
-    var d = new Date();
-    var m = d.getMonth() + 1, day = d.getDate();
-    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
-  }
-  var today = todayStr();
-  var UPCOMING = SEVAS.filter(function(s){ return !s.until || s.until >= today; });
+  var UPCOMING = [];
 
   var select     = form.querySelector('[data-seva-select]');
   var detailBox  = form.querySelector('[data-seva-detail]');
@@ -172,14 +128,14 @@
   /* ---- fetch live events from Supabase ---- */
   if(window.ABASS_API && window.ABASS_API.getEvents){
     window.ABASS_API.getEvents({ upcomingOnly: true }).then(function(res){
-      if(res && res.data && res.data.length > 0){
+      if(res && res.data){
         UPCOMING = res.data.map(function(e){
           return {
             id: e.slug || e.id,
             en: e.title_en,
             ta: e.title_ta || e.title_en,
             ml: e.title_ml || window.getMalayalamTranslation(e.title_en) || e.title_en,
-            whenEn: e.date_display_en || (e.is_recurring ? (e.recurrence_rule || 'Monthly') : (e.start_date + (e.end_date ? ' to ' + e.end_date : ''))),
+            whenEn: e.date_display_en || (e.is_recurring ? (e.recurrence_rule || 'Monthly') : [e.start_date, e.end_date].filter(Boolean).join(' to ')),
             whenTa: e.date_display_ta || e.date_display_en || '',
             whenMl: e.date_display_ml || window.getMalayalamTranslation(e.date_display_en) || e.date_display_en || '',
             locationEn: e.location_en || '',

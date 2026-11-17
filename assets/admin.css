@@ -1,13 +1,13 @@
 /* ==========================================================================
    ABASS ADMIN PANEL STYLES
    Visual language matches ABASS sacred aesthetic:
-   Deep Navy, Sacred Gold, Temple Maroon, Cream, Crisp Typography
+   Deep Navy, Sacred Gold, Rust Orange, Cream, Crisp Typography
    ========================================================================== */
 
 :root {
   --admin-navy: #0E1E3A;
   --admin-navy-deep: #07101E;
-  --admin-maroon: #7C2331;
+  --admin-maroon: #F97316;
   --admin-gold: #C79A44;
   --admin-gold-soft: #E4C888;
   --admin-cream: #FDF8F0;
@@ -162,7 +162,7 @@ textarea.form-control {
   color: #fff;
 }
 .btn-primary:hover {
-  background: #641b26;
+  background: #8F4128;
 }
 .btn-gold {
   background: var(--admin-gold);

@@ -47,8 +47,8 @@ WHAT CHANGED
    - Live detail card: amount, description, what the sponsor receives
    - Quick amount chips plus an "other amount" field
    - Sankalpam fields, sends a formatted WhatsApp message
-   To edit the seva list, amounts or perks, see the SEVAS array
-   near the top of assets/_devotional.js.
+   Upcoming event records and their public-card details are managed
+   through the existing Admin Portal Events tab.
 
 4. Devotional styling across all 10 pages
    - Google Fonts (Cinzel / Work Sans / Noto Tamil) were referenced
@@ -80,10 +80,9 @@ REVIEW ROUND — 19 September 2026
    Seva Sangham" (was "Ayyappa Seva Sangham Trust").
 2. "80 years" removed: About-page hero wording, and the 80-year
    emblem retouched out of assets/images/gallery-15.jpg (the poster).
-3. Seva Sankalpam now lists ONLY upcoming events (same four as
-   events.html). Edit the SEVAS array in assets/_devotional.js.
-   Items with data-until="YYYY-MM-DD" (events.html, mobile bar) and
-   `until` in SEVAS disappear automatically after that date.
+3. Seva Sankalpam now loads upcoming events from the shared Supabase
+   events table. Published event records also populate the event cards,
+   contribution form and mobile quick sponsor selector.
 4. All donation amounts removed (Sankalpam form, Donations page cards,
    WhatsApp messages). The Events-page "Contribute" form still has a
    typed "Amount" field for reconciliation.

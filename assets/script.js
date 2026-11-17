@@ -33,6 +33,38 @@ var LANG_STORAGE_KEY = 'abass_lang';
     return null;
   };
 
+  window.getABASSEventHeader = function(event){
+    var titleEn = event.title_en || '';
+    var headerSubtitle = event.header_subtitle || '';
+    var displayStructure = event.display_structure || 'title-only';
+    if(typeof event.display_structure === 'undefined' && event.is_recurring && !headerSubtitle){
+      titleEn = titleEn.replace(/^Monthly\s+/i, 'EVERY MONTH ').toUpperCase();
+      var schedule = (event.recurrence_rule || event.date_display_en || '').match(/^Every\s+(\d+(?:st|nd|rd|th)?)\s+(Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday|Friday)\b/i);
+      if(schedule){
+        headerSubtitle = schedule[1].toUpperCase() + ' ' + schedule[2].slice(0, 3).toUpperCase();
+        displayStructure = 'subtitle-above-title';
+      }
+    }
+    return {
+      titleEn: titleEn,
+      titleTa: event.title_ta || titleEn,
+      titleMl: event.title_ml || window.getMalayalamTranslation(titleEn) || titleEn,
+      subtitle: headerSubtitle,
+      displayStructure: displayStructure
+    };
+  };
+
+  window.getABASSEventHeaderLabel = function(header, language){
+    var title = language === 'ta' ? header.titleTa : (language === 'ml' ? header.titleMl : header.titleEn.toUpperCase());
+    var subtitle = language === 'ml'
+      ? (window.getMalayalamTranslation(header.subtitle) || header.subtitle)
+      : header.subtitle;
+    if(!subtitle || header.displayStructure === 'title-only') return title;
+    return header.displayStructure === 'subtitle-above-title'
+      ? subtitle + ' – ' + title
+      : title + ' – ' + subtitle;
+  };
+
   window.applyLang = function(lang, skipSave){
     if(lang !== 'en' && lang !== 'ta' && lang !== 'ml'){ lang = 'en'; }
     currentLang = lang;
@@ -76,9 +108,9 @@ var LANG_STORAGE_KEY = 'abass_lang';
     document.body.classList.toggle('lang-ml', lang === 'ml');
     document.documentElement.setAttribute('lang', lang);
 
-    // Persist the choice so it carries over to every other page
+    // Keep the choice in this tab so it carries over to other pages.
     if(!skipSave){
-      try { window.localStorage.setItem(LANG_STORAGE_KEY, lang); } catch(e){}
+      try { window.sessionStorage.setItem(LANG_STORAGE_KEY, lang); } catch(e){}
     }
 
     // Update lightbox if open
@@ -91,10 +123,10 @@ var LANG_STORAGE_KEY = 'abass_lang';
     b.addEventListener('click', function(){ window.applyLang(b.getAttribute('data-lang')); });
   });
 
-  // Restore the last-chosen language (falls back to English on first visit)
+  // Restore this tab's language choice; new tabs start in English.
   var savedLang = 'en';
   try {
-    var stored = window.localStorage.getItem(LANG_STORAGE_KEY);
+    var stored = window.sessionStorage.getItem(LANG_STORAGE_KEY);
     if(stored === 'en' || stored === 'ta' || stored === 'ml'){ savedLang = stored; }
   } catch(e){}
   window.applyLang(savedLang, true);
@@ -190,11 +222,10 @@ document.querySelectorAll('.obj-head').forEach(function(head){
     form.addEventListener('submit',function(e){
       e.preventDefault();
       var data=new FormData(form);
-      var event=(data.get('event')||'').trim();
-      if(window.currentLang === 'ml'){
-        var selectedEvent=form.querySelector('[name="event"] option:checked');
-        event=selectedEvent ? (selectedEvent.getAttribute('data-ml') || window.getMalayalamTranslation(event) || event) : (window.getMalayalamTranslation(event) || event);
-      }
+      var selectedEvent=form.querySelector('[name="event"] option:checked');
+      var event=selectedEvent
+        ? (selectedEvent.getAttribute('data-title-' + (window.currentLang || 'en')) || selectedEvent.textContent)
+        : '';
       var name=(data.get('name')||'').trim();
       var mobile=(data.get('mobile')||'').trim();
       var place=(data.get('place')||'').trim();
@@ -534,51 +565,74 @@ document.querySelectorAll('.obj-head').forEach(function(head){
   if(!select || !btn) return;
 
   var phone = '919841820668';
-  var messages = {
-    general:        { en:'Swamiye Saranam Ayyappa! I would like to make a general donation to ABASS.', ta:'சுவாமியே சரணம் ஐயப்பா! நான் ABASS-க்கு பொது நன்கொடை வழங்க விரும்புகிறேன்.' },
-    social:         { en:'Swamiye Saranam Ayyappa! I would like to support the social welfare activities at ABASS.', ta:'சுவாமியே சரணம் ஐயப்பா! ABASS-ன் சமூக நலன் நடவடிக்கைகளை ஆதரிக்க விரும்புகிறேன்.' },
-    annadhaanam:    { en:'Swamiye Saranam Ayyappa! I wish to sponsor the Monthly Annadhaanam at ABASS. Please share the details.', ta:'சுவாமியே சரணம் ஐயப்பா! ABASS-ல் மாதாந்திர அன்னதானத்தை ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.' },
-    kumbabhishekam: { en:'Swamiye Saranam Ayyappa! I wish to sponsor the Bharathi Nagar Pillayar Koil Kumbabhishekam Annadhaanam (27-30 Oct 2026). Please share the details.', ta:'சுவாமியே சரணம் ஐயப்பா! பாரதி நகர் பிள்ளையார் கோவில் கும்பாபிஷேக அன்னதானத்தை (27-30 அக் 2026) ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.' },
-    padi:           { en:'Swamiye Saranam Ayyappa! I would like to sponsor the Yearly Padi Pooja (12 Dec 2026) at ABASS. Please share the details.', ta:'சுவாமியே சரணம் ஐயப்பா! ABASS-ல் ஆண்டு படி பூஜையை (12 டிச 2026) ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.' },
-    vilakku:        { en:'Swamiye Saranam Ayyappa! I would like to sponsor the Yearly Vilakku Pooja (19 Dec 2026) at ABASS. Please share the details.', ta:'சுவாமியே சரணம் ஐயப்பா! ABASS-ல் ஆண்டு விளக்கு பூஜையை (19 டிச 2026) ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.' }
-  };
+  function showNoEvents(){
+    select.innerHTML = '';
+    var option = document.createElement('option');
+    option.value = '';
+    option.disabled = true;
+    option.selected = true;
+    option.setAttribute('data-en', 'No events currently available');
+    option.setAttribute('data-ta', 'தற்போது நிகழ்வுகள் எதுவும் இல்லை');
+    option.setAttribute('data-ml', 'നിലവിൽ പരിപാടികളൊന്നും ലഭ്യമല്ല');
+    option.textContent = 'No events currently available';
+    select.appendChild(option);
+    select.disabled = true;
+    btn.disabled = true;
+  }
 
-  // Dynamic Supabase sync for mobile quick sponsor bar
-  if (window.ABASS_API && window.ABASS_API.getEvents) {
-    window.ABASS_API.getEvents({ upcomingOnly: true }).then(function(res){
-      if(res && res.data && res.data.length > 0){
-        while(select.options.length > 2){ select.remove(2); }
-        res.data.forEach(function(e){
-          var opt = document.createElement('option');
-          var key = e.slug || e.id;
-          opt.value = key;
-          var enText = e.title_en + (e.date_display_en ? ' (' + e.date_display_en + ')' : '');
-          var taText = (e.title_ta || e.title_en) + (e.date_display_ta ? ' (' + e.date_display_ta + ')' : '');
-          opt.setAttribute('data-en', enText);
-          opt.setAttribute('data-ta', taText);
-          if (e.end_date || e.start_date) {
-            opt.setAttribute('data-until', e.end_date || e.start_date);
-          }
-          var mlText = window.getMalayalamTranslation(enText) || window.getMalayalamTranslation(e.title_en) || enText;
-          opt.setAttribute('data-ml', mlText);
-          opt.textContent = (window.currentLang === 'ml') ? mlText : ((window.currentLang === 'ta') ? taText : enText);
-          select.appendChild(opt);
-
-          messages[key] = {
-            en: 'Swamiye Saranam Ayyappa! I would like to sponsor ' + e.title_en + ' (' + (e.date_display_en || '') + ') at ABASS. Please share the details.',
-            ta: 'சுவாமியே சரணம் ஐயப்பா! நான் ABASS-ல் ' + (e.title_ta || e.title_en) + ' (' + (e.date_display_ta || '') + ') ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.',
-            ml: 'സ്വാമിയേ ശരണം അയ്യപ്പാ! ABASS-ൽ ' + (e.title_ml || window.getMalayalamTranslation(e.title_en) || e.title_en) + ' (' + (e.date_display_ml || window.getMalayalamTranslation(e.date_display_en) || e.date_display_en || '') + ') സ്പോൺസർ ചെയ്യാൻ ആഗ്രഹിക്കുന്നു. ദയവായി വിവരങ്ങൾ പങ്കിടുക.'
-          };
-        });
+  function showEvents(events){
+    select.innerHTML = '';
+    events.forEach(function(event){
+      if(!event.id){
+        console.warn('Skipping mobile sponsor event without a database ID:', event);
+        return;
       }
-    }).catch(function(err){ console.warn('MQS sync error:', err); });
+      var header = window.getABASSEventHeader(event);
+      var labelEn = window.getABASSEventHeaderLabel(header, 'en');
+      var labelTa = window.getABASSEventHeaderLabel(header, 'ta');
+      var labelMl = window.getABASSEventHeaderLabel(header, 'ml');
+      var option = document.createElement('option');
+      option.value = event.id;
+      option.setAttribute('data-title-en', labelEn);
+      option.setAttribute('data-title-ta', labelTa);
+      option.setAttribute('data-title-ml', labelMl);
+      option.setAttribute('data-en', labelEn);
+      option.setAttribute('data-ta', labelTa);
+      option.setAttribute('data-ml', labelMl);
+      option.textContent = window.currentLang === 'ml' ? labelMl : (window.currentLang === 'ta' ? labelTa : labelEn);
+      select.appendChild(option);
+    });
+
+    if(!select.options.length){ showNoEvents(); return; }
+    select.disabled = false;
+    btn.disabled = false;
+  }
+
+  select.innerHTML = '';
+  select.disabled = true;
+  btn.disabled = true;
+  if(window.ABASS_API && window.ABASS_API.getEvents){
+    window.ABASS_API.getEvents({ upcomingOnly: true }).then(function(res){
+      var events = res && Array.isArray(res.data) ? res.data.filter(function(event){ return event.published !== false; }) : [];
+      showEvents(events);
+    }).catch(function(err){
+      console.warn('Mobile sponsor events sync error:', err);
+      showNoEvents();
+    });
+  }else{
+    showNoEvents();
   }
 
   btn.addEventListener('click', function(){
-    var key = select.value;
-    var msgObj = messages[key] || messages.general;
+    var selectedOption = select.options[select.selectedIndex];
+    if(!selectedOption || !selectedOption.value) return;
     var lang = window.currentLang || 'en';
-    var text = lang === 'ml' ? (msgObj.ml || window.getMalayalamTranslation(msgObj.en) || msgObj.en) : (msgObj[lang] || msgObj.en);
+    var eventTitle = selectedOption.getAttribute('data-title-' + lang) || selectedOption.textContent;
+    var text = lang === 'ml'
+      ? 'സ്വാമിയേ ശരണം അയ്യപ്പാ! ABASS-ൽ ' + eventTitle + ' സ്പോൺസർ ചെയ്യാൻ ആഗ്രഹിക്കുന്നു. ദയവായി വിവരങ്ങൾ പങ്കിടുക.'
+      : (lang === 'ta'
+        ? 'சுவாமியே சரணம் ஐயப்பா! நான் ABASS-ல் ' + eventTitle + ' ஸ்பான்சர் செய்ய விரும்புகிறேன். விவரங்களைப் பகிரவும்.'
+        : 'Swamiye Saranam Ayyappa! I would like to sponsor ' + eventTitle + ' at ABASS. Please share the details.');
     window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
   });
 })();

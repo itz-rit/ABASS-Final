@@ -269,7 +269,7 @@
           </div>
           <button type="button" id="addEventBtn" class="btn btn-primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Add Event</span>
+            <span>ADD NEW EVENT</span>
           </button>
         </div>
 
@@ -418,6 +418,21 @@
             </div>
           </div>
 
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="eventHeaderSubtitle">Header Subtitle <span class="hint">(optional)</span></label>
+              <input type="text" id="eventHeaderSubtitle" class="form-control" placeholder="e.g. 2ND SAT">
+            </div>
+            <div class="form-group">
+              <label for="eventDisplayStructure">Event Type / Display Structure</label>
+              <select id="eventDisplayStructure" class="form-control">
+                <option value="title-only">Title only</option>
+                <option value="subtitle-above-title">Subtitle above title</option>
+                <option value="subtitle-below-title">Subtitle below title</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group">
             <label for="eventSlug">URL Identifier / Slug <span class="hint">(optional, auto-generated)</span></label>
             <input type="text" id="eventSlug" class="form-control" placeholder="e.g. yearly-padi-pooja">
@@ -450,11 +465,11 @@
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label for="eventDateDisplayEn">Display Date (EN) <span class="hint">(Badge text)</span></label>
+              <label for="eventDateDisplayEn">Event Date (English) <span class="hint">(shown on public event card)</span></label>
               <input type="text" id="eventDateDisplayEn" class="form-control" placeholder="e.g. 12 Dec 2026 or 27–30 Oct 2026">
             </div>
             <div class="form-group">
-              <label for="eventDateDisplayTa">Display Date (TA)</label>
+              <label for="eventDateDisplayTa">Event Date (Tamil)</label>
               <input type="text" id="eventDateDisplayTa" class="form-control" placeholder="e.g. 12 டிச 2026">
             </div>
           </div>
@@ -462,7 +477,7 @@
           <div class="form-grid-2">
             <div class="form-group">
               <label for="eventLocationEn">Location (English) *</label>
-              <input type="text" id="eventLocationEn" class="form-control" placeholder="e.g. Zamin Pallavaram, Chennai">
+              <input type="text" id="eventLocationEn" class="form-control" placeholder="e.g. Zamin Pallavaram, Chennai" required>
             </div>
             <div class="form-group">
               <label for="eventLocationTa">Location (Tamil)</label>
@@ -477,6 +492,12 @@
           <div class="form-group">
             <label for="eventDescTa">Description (Tamil)</label>
             <textarea id="eventDescTa" class="form-control" placeholder="நிகழ்வின் முழு விவரங்கள்..."></textarea>
+          </div>
+          <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="checkbox" id="eventDescriptionVisible" checked style="width:16px;height:16px;">
+              <span>Show description on public event card when provided</span>
+            </label>
           </div>
 
           <div class="form-grid-2">

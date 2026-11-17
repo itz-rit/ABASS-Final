@@ -37,82 +37,6 @@
     return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
   }
 
-  // 3. FALLBACK DATA (Mirrors existing static content)
-  var FALLBACK_EVENTS = [
-    {
-      id: 'annadhaanam',
-      slug: 'annadhaanam',
-      title_en: 'Monthly Annadhaanam',
-      title_ta: 'மாதாந்திர அன்னதானம்',
-      description_en: 'Free meal offering for a minimum of 250 persons, held every Second Saturday of the month.',
-      description_ta: 'ஒவ்வொரு மாத இரண்டாவது சனிக்கிழமையும் குறைந்தது 250 பேருக்கு இலவச அன்னதானம்.',
-      start_date: null,
-      end_date: null,
-      date_display_en: 'Every 2nd Saturday',
-      date_display_ta: 'ஒவ்வொரு மாத 2வது சனி',
-      location_en: 'Pallavaram, Chennai',
-      location_ta: 'பல்லாவரம், சென்னை',
-      is_recurring: true,
-      recurrence_rule: 'Every 2nd Saturday',
-      published: true,
-      display_order: 1
-    },
-    {
-      id: 'kumbabhishekam',
-      slug: 'kumbabhishekam',
-      title_en: 'Pallavaram Bharathi Nagar Pillayar Koil Kumbabhishekam Annadhaanam',
-      title_ta: 'பல்லாவரம் பாரதி நகர் பிள்ளையார் கோவில் கும்பாபிஷேகம் அன்னதானம்',
-      description_en: 'Annadhaanam in connection with the Kumbabhishekam at Bharathi Nagar Pillayar Koil, Pallavaram, from 27th to 30th October 2026.',
-      description_ta: '27 முதல் 30 அக்டோபர் 2026 வரை பல்லாவரம் பாரதி நகர் பிள்ளையார் கோவில் கும்பாபிஷேகத்தின் போது அன்னதானம்.',
-      start_date: '2026-10-27',
-      end_date: '2026-10-30',
-      date_display_en: '27–30 Oct 2026',
-      date_display_ta: '27–30 அக் 2026',
-      location_en: 'Pallavaram, Chennai',
-      location_ta: 'பல்லாவரம், சென்னை',
-      is_recurring: false,
-      recurrence_rule: null,
-      published: true,
-      display_order: 2
-    },
-    {
-      id: 'padi',
-      slug: 'padi',
-      title_en: 'Yearly Padi Pooja',
-      title_ta: 'ஆண்டு படி பூஜை',
-      description_en: 'Annual 18 Padi Pooja observed on 12th December 2026.',
-      description_ta: '12 டிசம்பர் 2026 அன்று ஆண்டு 18 படி பூஜை நடைபெறும்.',
-      start_date: '2026-12-12',
-      end_date: '2026-12-12',
-      date_display_en: '12 Dec 2026',
-      date_display_ta: '12 டிச 2026',
-      location_en: 'Zamin Pallavaram, Chennai',
-      location_ta: 'ஜமீன் பல்லாவரம், சென்னை',
-      is_recurring: false,
-      recurrence_rule: null,
-      published: true,
-      display_order: 3
-    },
-    {
-      id: 'vilakku',
-      slug: 'vilakku',
-      title_en: 'Yearly Vilakku Pooja',
-      title_ta: 'ஆண்டு விளக்கு பூஜை',
-      description_en: 'Annual Thiru Vilakku Pooja observed on 19th December 2026.',
-      description_ta: '19 டிசம்பர் 2026 அன்று ஆண்டு திருவிளக்கு பூஜை நடைபெறும்.',
-      start_date: '2026-12-19',
-      end_date: '2026-12-19',
-      date_display_en: '19 Dec 2026',
-      date_display_ta: '19 டிச 2026',
-      location_en: 'Zamin Pallavaram, Chennai',
-      location_ta: 'ஜமீன் பல்லாவரம், சென்னை',
-      is_recurring: false,
-      recurrence_rule: null,
-      published: true,
-      display_order: 4
-    }
-  ];
-
   var FALLBACK_GALLERY = [
     { id:'g1', category:'padi-pooja', image_url:'assets/images/gallery-1.jpg', badge_en:'18 Padi Pooja', badge_ta:'18 படி பூஜை', title_en:'Grand 18 Padi Altar & Deepam Row', title_ta:'புனித 18 படிகள் பீடம் & தீப வரிசை', description_en:'Sacred 18 Padi Pooja altar adorned with glowing brass deepams, flowers and revered Guruswamys in prayer.', description_ta:'ஒளிரும் பித்தளை தீபங்கள், மலர்கள் மற்றும் பிரார்த்தனையில் இருக்கும் குருசுவாமிகளால் அலங்கரிக்கப்பட்ட புனித 18 படி பூஜை பீடம்.' },
     { id:'g2', category:'padi-pooja', image_url:'assets/images/gallery-2.jpg', badge_en:'18 Padi Pooja', badge_ta:'18 படி பூஜை', title_en:'Sri Dharma Sastha Sanctum Sanctorum', title_ta:'ஸ்ரீ தர்ம சாஸ்தா கருவறை & 18 படிகள்', description_en:'Majestic view of Sri Ayyappa Swami sanctum with 18 golden sacred steps and ornate floral decoration.', description_ta:'18 பொற்படிகள் மற்றும் அலங்கரிக்கப்பட்ட மலர் அலங்காரத்துடன் கூடிய ஸ்ரீ ஐயப்ப சுவாமி கருவறையின் கம்பீரமான காட்சி.' },
@@ -180,7 +104,9 @@
             .order('display_order', { ascending: true });
 
           var res = await query;
-          if (!res.error && res.data && res.data.length > 0) {
+          if (res.error) {
+            console.warn('ABASS: Supabase fetch events error:', res.error);
+          } else if (res.data) {
             var data = res.data;
             if (upcomingOnly) {
               data = data.filter(function (e) {
@@ -192,20 +118,11 @@
             return { data: data, fromFallback: false };
           }
         } catch (err) {
-          console.warn('ABASS: Supabase fetch events error, using fallback:', err);
+          console.warn('ABASS: Supabase fetch events error:', err);
         }
       }
 
-      // Fallback
-      var fb = FALLBACK_EVENTS;
-      if (upcomingOnly) {
-        fb = fb.filter(function (e) {
-          if (e.is_recurring) return true;
-          var compDate = e.end_date || e.start_date;
-          return !compDate || compDate >= today;
-        });
-      }
-      return { data: fb, fromFallback: true };
+      return { data: [], fromFallback: false };
     },
 
     // --- GALLERY ---
