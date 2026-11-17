@@ -3,7 +3,7 @@
  * Supabase Auth, Row Level Security verification, and CRUD operations for:
  * 1. Events (Start/End Date, Recurring, Location, Published status)
  * 2. Gallery (Image upload to Supabase Storage bucket 'gallery', Categories, Bilingual fields)
- * 3. Trustees & Committee (54 members, Groups, Profile fields: Family, Gothram, Star, Rasi)
+ * 3. Trustees & Committee (member categories, profile fields, photo uploads)
  */
 
 (function () {
@@ -18,7 +18,7 @@
     events: [],
     gallery: [],
     members: [],
-    memberGroupFilter: 'all',
+    memberCategoryFilter: 'all',
     memberSearchQuery: ''
   };
 
@@ -812,19 +812,31 @@
   // ============================================================
   // 3. TRUSTEES & COMMITTEE MANAGEMENT
   // ============================================================
+  function getMemberCategoryLabel(category) {
+    var labels = {
+      'office-bearers': 'Office Bearers',
+      'life-member': 'Life Member',
+      'member': 'Member',
+      'apex-committee': 'Apex Committee',
+      'core-committee': 'Core Committee'
+    };
+    return labels[category] || '—';
+  }
+
   function renderTrusteesTable() {
     var tbody = document.getElementById('trusteesTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
     var filtered = state.members.filter(function (m) {
-      if (state.memberGroupFilter !== 'all' && m.group_type !== state.memberGroupFilter) {
+      if (state.memberCategoryFilter !== 'all' && m.category !== state.memberCategoryFilter) {
         return false;
       }
       if (state.memberSearchQuery) {
         var q = state.memberSearchQuery.toLowerCase();
         return (m.name_en && m.name_en.toLowerCase().indexOf(q) !== -1) ||
-               (m.role_en && m.role_en.toLowerCase().indexOf(q) !== -1);
+               (m.role_en && m.role_en.toLowerCase().indexOf(q) !== -1) ||
+               (getMemberCategoryLabel(m.category).toLowerCase().indexOf(q) !== -1);
       }
       return true;
     });
@@ -837,21 +849,23 @@
     filtered.forEach(function (m) {
       var tr = document.createElement('tr');
       var statusClass = m.active ? 'active' : 'inactive';
-      var statusText = m.active ? 'Active' : 'Inactive';
-      var groupLabel = m.group_type === 'apex' ? 'Apex Committee' : 'Present Committee';
+      var statusText = m.active ? 'Published' : 'Inactive';
+      var photo = m.photo_url
+        ? '<img src="' + escapeHtml(m.photo_url) + '" alt="" loading="lazy" style="width:42px;height:52px;object-fit:cover;border-radius:6px;flex:none;">'
+        : '<div style="width:42px;height:52px;border-radius:6px;background:var(--admin-cream);border:1px solid var(--admin-line);display:flex;align-items:center;justify-content:center;color:var(--admin-muted);font-size:10px;flex:none;">No photo</div>';
 
       tr.innerHTML =
         '<td data-label="Member Name"><div style="display:flex;align-items:center;gap:10px;">' +
-          '<div style="width:34px;height:34px;border-radius:50%;background:var(--admin-maroon);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:\'Cinzel\',serif;flex:none;">' + escapeHtml(m.initials || 'AB') + '</div>' +
-          '<div><strong>' + escapeHtml(m.name_en) + '</strong>' + (m.featured ? ' <span class="status-pill active" style="font-size:10px;">Lead</span>' : '') + '<br><small style="color:var(--admin-muted);">' + escapeHtml(m.name_ta || '') + '</small></div>' +
+          photo +
+          '<div><strong>' + escapeHtml(m.name_en) + '</strong>' + (m.featured ? ' <span class="status-pill active" style="font-size:10px;">Featured</span>' : '') + (m.name_ta ? '<br><small style="color:var(--admin-muted);">' + escapeHtml(m.name_ta) + '</small>' : '') + '</div>' +
         '</div></td>' +
-        '<td data-label="Designation">' + escapeHtml(m.role_en) + '</td>' +
-        '<td data-label="Committee Group"><span class="status-pill ' + (m.group_type === 'apex' ? 'published' : 'draft') + '">' + groupLabel + '</span></td>' +
+        '<td data-label="Designation">' + escapeHtml(m.role_en || '—') + '</td>' +
+        '<td data-label="Category">' + escapeHtml(getMemberCategoryLabel(m.category)) + '</td>' +
+        '<td data-label="Display Order">' + escapeHtml(String(m.display_order == null ? 0 : m.display_order)) + '</td>' +
         '<td data-label="Status"><span class="status-pill ' + statusClass + '">' + statusText + '</span></td>' +
-        '<td data-label="Gothram / Rasi">' + (m.gothram ? '<span title="' + escapeHtml(m.gothram) + '">G: ' + escapeHtml(m.gothram) + '</span><br>' : '') + (m.rasi ? 'R: ' + escapeHtml(m.rasi) : (m.family_members ? 'Has Family' : '—')) + '</td>' +
         '<td data-label="Actions"><div class="row-actions">' +
-          '<button type="button" class="btn btn-outline btn-sm edit-member-btn" data-id="' + m.id + '">Edit</button>' +
-          '<button type="button" class="btn btn-danger btn-sm remove-member-btn" data-id="' + m.id + '">Remove</button>' +
+          '<button type="button" class="btn btn-outline btn-sm edit-member-btn" data-id="' + escapeHtml(m.id) + '">Edit</button>' +
+          '<button type="button" class="btn btn-danger btn-sm delete-member-btn" data-id="' + escapeHtml(m.id) + '">Delete</button>' +
         '</div></td>';
       tbody.appendChild(tr);
     });
@@ -859,55 +873,175 @@
     tbody.querySelectorAll('.edit-member-btn').forEach(function (btn) {
       btn.addEventListener('click', function () { openMemberModal(btn.getAttribute('data-id')); });
     });
-    tbody.querySelectorAll('.remove-member-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { removeMember(btn.getAttribute('data-id')); });
+    tbody.querySelectorAll('.delete-member-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { deleteMember(btn.getAttribute('data-id')); });
     });
+  }
+
+  function createMemberId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return 'member-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function showMemberPhotoPreview(src, alt) {
+    var preview = document.getElementById('memberPhotoPreview');
+    var empty = document.getElementById('memberPhotoEmpty');
+    if (!src) {
+      preview.removeAttribute('src');
+      preview.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+    preview.src = src;
+    preview.alt = alt || 'Member photo preview';
+    preview.style.display = 'block';
+    empty.style.display = 'none';
+  }
+
+  function validateMemberPhoto(file) {
+    var extension = file.name.split('.').pop().toLowerCase();
+    var allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    var allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowedExtensions.indexOf(extension) === -1 ||
+        (file.type && allowedTypes.indexOf(file.type.toLowerCase()) === -1)) {
+      return 'Choose a JPG, JPEG, PNG, or WebP image.';
+    }
+    if (file.size === 0) {
+      return 'Choose a non-empty image file.';
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return 'Member photos must be 5 MB or smaller.';
+    }
+    return '';
   }
 
   function openMemberModal(id) {
     var modal = document.getElementById('memberModal');
     var form = document.getElementById('memberForm');
+    var photoInput = document.getElementById('memberPhotoFile');
     form.reset();
+    photoInput.required = false;
+    showMemberPhotoPreview('', '');
 
     var isEdit = !!id;
     document.getElementById('memberModalTitle').textContent = isEdit ? 'Edit Member Profile' : 'Add New Member';
     document.getElementById('memberId').value = id || '';
-    document.getElementById('memberIdField').readOnly = isEdit;
+    document.getElementById('memberIdField').value = id || createMemberId();
 
     if (isEdit) {
       var m = state.members.filter(function (x) { return x.id === id; })[0];
-      if (m) {
-        document.getElementById('memberIdField').value = m.id || '';
-        document.getElementById('memberNameEn').value = m.name_en || '';
-        document.getElementById('memberNameTa').value = m.name_ta || '';
-        document.getElementById('memberRoleEn').value = m.role_en || '';
-        document.getElementById('memberRoleTa').value = m.role_ta || '';
-        document.getElementById('memberGroupType').value = m.group_type || 'present';
-        document.getElementById('memberInitials').value = m.initials || '';
-        document.getElementById('memberFeatured').checked = !!m.featured;
-        document.getElementById('memberActive').checked = m.active !== false;
-        document.getElementById('memberDisplayOrder').value = m.display_order || 0;
-        document.getElementById('memberFamily').value = m.family_members || '';
-        document.getElementById('memberGothram').value = m.gothram || '';
-        document.getElementById('memberStar').value = m.nakshatram_star || '';
-        document.getElementById('memberRasi').value = m.rasi || '';
+      if (!m) {
+        alert('The selected member could not be found. Refresh the list and try again.');
+        return;
       }
+      document.getElementById('memberNameEn').value = m.name_en || '';
+      document.getElementById('memberNameTa').value = m.name_ta || '';
+      document.getElementById('memberRoleEn').value = m.role_en || '';
+      document.getElementById('memberRoleTa').value = m.role_ta || '';
+      document.getElementById('memberGroupType').value = m.category || '';
+      document.getElementById('memberInitials').value = m.initials || '';
+      document.getElementById('memberFeatured').checked = !!m.featured;
+      document.getElementById('memberActive').checked = m.active !== false;
+      document.getElementById('memberDisplayOrder').value = m.display_order || 0;
+      document.getElementById('memberFamily').value = m.family_members || '';
+      document.getElementById('memberGothram').value = m.gothram || '';
+      document.getElementById('memberStar').value = m.nakshatram_star || '';
+      document.getElementById('memberRasi').value = m.rasi || '';
+      showMemberPhotoPreview(m.photo_url || '', 'Current photo for ' + (m.name_en || 'member'));
+      photoInput.required = !m.photo_url;
     } else {
       document.getElementById('memberActive').checked = true;
       document.getElementById('memberDisplayOrder').value = state.members.length + 1;
+      document.getElementById('memberGroupType').value = '';
+      photoInput.required = true;
     }
 
     modal.classList.add('open');
   }
 
+  function handleMemberPhotoSelect(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    var validationError = validateMemberPhoto(file);
+    if (validationError) {
+      event.target.value = '';
+      alert(validationError);
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (loadEvent) {
+      showMemberPhotoPreview(loadEvent.target.result, 'Member photo preview');
+    };
+    reader.onerror = function () {
+      alert('The selected photo could not be previewed. Choose another image.');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function removeMemberPhotoIfUnused(client, photoPath) {
+    if (!photoPath) return;
+    var references = await client.from('members').select('id').eq('photo_path', photoPath);
+    if (references.error) throw new Error('Could not check photo references: ' + references.error.message);
+    if (references.data && references.data.length) return;
+
+    var publicPhoto = client.storage.from('member-photos').getPublicUrl(photoPath);
+    var memberUrl = publicPhoto.data && publicPhoto.data.publicUrl;
+    if (memberUrl) {
+      var urlReferences = await client.from('members').select('id').eq('photo_url', memberUrl);
+      if (urlReferences.error) throw new Error('Could not check photo URL references: ' + urlReferences.error.message);
+      if (urlReferences.data && urlReferences.data.length) return;
+
+      var galleryReferences = await client.from('gallery_items').select('id').eq('image_url', memberUrl);
+      if (galleryReferences.error) throw new Error('Could not check gallery photo references: ' + galleryReferences.error.message);
+      if (galleryReferences.data && galleryReferences.data.length) return;
+    }
+
+    var removed = await client.storage.from('member-photos').remove([photoPath]);
+    if (removed.error) throw new Error('Could not remove the unused photo: ' + removed.error.message);
+  }
+
   async function saveMember(e) {
     e.preventDefault();
     var client = getClient();
-    if (!client) return;
+    if (!client) {
+      alert('Supabase is not configured. Configure the database before saving member details.');
+      return;
+    }
 
     var nameEn = document.getElementById('memberNameEn').value.trim();
-    var id = document.getElementById('memberIdField').value.trim() || slugify(nameEn);
+    var category = document.getElementById('memberGroupType').value;
+    var id = document.getElementById('memberIdField').value.trim() || createMemberId();
     var isEdit = !!document.getElementById('memberId').value;
+    var existingMember = isEdit ? state.members.filter(function (m) { return m.id === id; })[0] : null;
+    var photoInput = document.getElementById('memberPhotoFile');
+    var photoFile = photoInput.files && photoInput.files[0];
+    var photoValidationError = photoFile ? validateMemberPhoto(photoFile) : '';
+
+    if (!nameEn) {
+      alert('Enter the member’s full name.');
+      return;
+    }
+    if (!category) {
+      alert('Select a member category.');
+      return;
+    }
+    if (photoValidationError) {
+      alert(photoValidationError);
+      return;
+    }
+    if (!photoFile && (!isEdit || !existingMember || !existingMember.photo_url)) {
+      alert('Choose a profile photo before saving this member.');
+      return;
+    }
+    var displayOrderValue = document.getElementById('memberDisplayOrder').value;
+    var displayOrder = displayOrderValue === '' ? 0 : Number(displayOrderValue);
+    if (!Number.isInteger(displayOrder) || displayOrder < 0) {
+      alert('Display order must be a non-negative whole number.');
+      return;
+    }
 
     var initials = document.getElementById('memberInitials').value.trim();
     if (!initials) {
@@ -918,13 +1052,14 @@
       id: id,
       name_en: nameEn,
       name_ta: document.getElementById('memberNameTa').value.trim() || null,
-      role_en: document.getElementById('memberRoleEn').value.trim(),
+      role_en: document.getElementById('memberRoleEn').value.trim() || null,
       role_ta: document.getElementById('memberRoleTa').value.trim() || null,
-      group_type: document.getElementById('memberGroupType').value,
+      category: category,
+      group_type: category === 'apex-committee' || category === 'office-bearers' || category === 'life-member' ? 'apex' : 'present',
       initials: initials,
       featured: document.getElementById('memberFeatured').checked,
       active: document.getElementById('memberActive').checked,
-      display_order: parseInt(document.getElementById('memberDisplayOrder').value, 10) || 0,
+      display_order: displayOrder,
       family_members: document.getElementById('memberFamily').value.trim() || null,
       gothram: document.getElementById('memberGothram').value.trim() || null,
       nakshatram_star: document.getElementById('memberStar').value.trim() || null,
@@ -932,11 +1067,37 @@
       updated_at: new Date().toISOString()
     };
 
+    record.photo_url = existingMember ? existingMember.photo_url || null : null;
+    record.photo_path = existingMember ? existingMember.photo_path || null : null;
+
     var btn = document.getElementById('saveMemberBtn');
     btn.disabled = true;
     btn.textContent = 'Saving...';
+    var uploadedPhotoPath = null;
+    var oldPhotoPath = existingMember ? existingMember.photo_path : null;
 
     try {
+      if (photoFile) {
+        btn.textContent = 'Uploading photo...';
+        var extension = photoFile.name.split('.').pop().toLowerCase();
+        var photoTypes = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+        uploadedPhotoPath = id + '/' + createMemberId() + '.' + extension;
+        var uploadResult = await client.storage.from('member-photos').upload(uploadedPhotoPath, photoFile, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: photoFile.type || photoTypes[extension]
+        });
+        if (uploadResult.error) throw new Error('Photo upload failed: ' + uploadResult.error.message);
+
+        var publicPhoto = client.storage.from('member-photos').getPublicUrl(uploadedPhotoPath);
+        if (!publicPhoto.data || !publicPhoto.data.publicUrl) {
+          throw new Error('The uploaded photo URL could not be generated.');
+        }
+        record.photo_path = uploadedPhotoPath;
+        record.photo_url = publicPhoto.data.publicUrl;
+      }
+
+      btn.textContent = 'Saving member...';
       var res;
       if (isEdit) {
         res = await client.from('members').update(record).eq('id', id);
@@ -944,38 +1105,63 @@
         res = await client.from('members').insert([record]);
       }
 
-      if (res.error) {
-        alert('Failed to save member: ' + res.error.message);
-      } else {
-        showToast(isEdit ? 'Member details updated.' : 'New member added successfully.');
-        document.getElementById('memberModal').classList.remove('open');
-        await loadAllData();
+      if (res.error) throw new Error('Failed to save member: ' + res.error.message);
+
+      if (oldPhotoPath && oldPhotoPath !== uploadedPhotoPath) {
+        try {
+          await removeMemberPhotoIfUnused(client, oldPhotoPath);
+        } catch (cleanupError) {
+          alert('Member saved, but the previous photo could not be cleaned up: ' + cleanupError.message);
+        }
       }
+
+      showToast(isEdit ? 'Member details updated.' : 'New member added successfully.');
+      document.getElementById('memberModal').classList.remove('open');
+      await loadAllData();
     } catch (err) {
-      alert('Error saving member: ' + err.message);
+      var cleanupMessage = '';
+      if (uploadedPhotoPath) {
+        try {
+          await removeMemberPhotoIfUnused(client, uploadedPhotoPath);
+        } catch (cleanupError) {
+          cleanupMessage = ' The uploaded photo also could not be cleaned up: ' + cleanupError.message;
+        }
+      }
+      alert('Error saving member: ' + err.message + cleanupMessage);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Save Member';
     }
   }
 
-  async function removeMember(id) {
-    if (!confirm('Are you sure you want to remove this member?\n\nThis will take them off the public website.')) return;
+  async function deleteMember(id) {
+    if (!confirm('Are you sure you want to delete this member?')) return;
 
     var client = getClient();
-    if (!client) return;
+    if (!client) {
+      alert('Supabase is not configured. Configure the database before deleting member details.');
+      return;
+    }
 
     try {
-      // Soft-delete (set active = false) or hard delete if confirmed
-      var res = await client.from('members').delete().eq('id', id);
-      if (res.error) {
-        alert('Failed to remove member: ' + res.error.message);
-      } else {
-        showToast('Member removed from Supabase.');
-        await loadAllData();
+      var member = state.members.filter(function (m) { return m.id === id; })[0];
+      if (!member) throw new Error('The selected member could not be found. Refresh the list and try again.');
+      var res = await client.from('members').delete().eq('id', id).select('id');
+      if (res.error) throw new Error('Failed to delete member: ' + res.error.message);
+      if (!res.data || !res.data.length) throw new Error('No member was deleted. Check that you have administrator permissions.');
+
+      if (member.photo_path) {
+        try {
+          await removeMemberPhotoIfUnused(client, member.photo_path);
+        } catch (cleanupError) {
+          alert('Member deleted, but the photo could not be cleaned up: ' + cleanupError.message);
+        }
       }
+
+      showToast('Member deleted successfully.');
+      await loadAllData();
     } catch (err) {
-      alert('Error removing member: ' + err.message);
+      alert('Error deleting member: ' + err.message);
     }
   }
 
@@ -1138,22 +1324,18 @@
     if (addMemberBtn) addMemberBtn.addEventListener('click', function () { openMemberModal(); });
     var memberForm = document.getElementById('memberForm');
     if (memberForm) memberForm.addEventListener('submit', saveMember);
+    var memberPhotoFile = document.getElementById('memberPhotoFile');
+    if (memberPhotoFile) memberPhotoFile.addEventListener('change', handleMemberPhotoSelect);
 
-    // Trustee filters
-    var memberFilterApex = document.getElementById('memberFilterApex');
-    var memberFilterPresent = document.getElementById('memberFilterPresent');
-    var memberFilterAll = document.getElementById('memberFilterAll');
+    // Member filters
+    var memberFilterCategory = document.getElementById('memberFilterCategory');
     var memberSearch = document.getElementById('memberSearch');
 
-    function updateMemberGroupFilter(group, activeBtn) {
-      state.memberGroupFilter = group;
-      [memberFilterAll, memberFilterApex, memberFilterPresent].forEach(function (b) { if (b) b.classList.remove('active'); });
-      if (activeBtn) activeBtn.classList.add('active');
+    function updateMemberCategoryFilter(category) {
+      state.memberCategoryFilter = category;
       renderTrusteesTable();
     }
-    if (memberFilterAll) memberFilterAll.addEventListener('click', function () { updateMemberGroupFilter('all', memberFilterAll); });
-    if (memberFilterApex) memberFilterApex.addEventListener('click', function () { updateMemberGroupFilter('apex', memberFilterApex); });
-    if (memberFilterPresent) memberFilterPresent.addEventListener('click', function () { updateMemberGroupFilter('present', memberFilterPresent); });
+    if (memberFilterCategory) memberFilterCategory.addEventListener('change', function (e) { updateMemberCategoryFilter(e.target.value); });
     if (memberSearch) {
       memberSearch.addEventListener('input', function (e) {
         state.memberSearchQuery = e.target.value.trim();

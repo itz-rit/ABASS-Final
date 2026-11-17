@@ -164,7 +164,6 @@
   </div>
 </footer>
 
-<script src="assets/trustees-data.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-config.js"></script>
 <script src="assets/supabase-client.js"></script>
@@ -190,9 +189,17 @@
     var roleEn = member.role_en || member.role || '';
     var roleTa = member.role_ta || roleEn;
     var roleMl = member.role_ml || (window.getMalayalamTranslation && window.getMalayalamTranslation(roleEn)) || roleEn;
-    var groupName = (member.group === 'apex' || member.group_type === 'apex') ? 'Apex Committee' : 'Present Committee';
-    var groupNameTa = (member.group === 'apex' || member.group_type === 'apex') ? 'உச்ச குழு' : 'தற்போதைய குழு';
-    var groupNameMl = (member.group === 'apex' || member.group_type === 'apex') ? 'മുൻനിര സമിതി' : 'നിലവിലെ സമിതി';
+    var categoryLabels = {
+      'office-bearers': ['Office Bearers', 'நிர்வாகிகள்', 'ഓഫീസ് ഭാരവാഹികൾ'],
+      'life-member': ['Life Member', 'வாழ்நாள் உறுப்பினர்', 'ആജീവനാന്ത അംഗം'],
+      'member': ['Member', 'உறுப்பினர்', 'അംഗം'],
+      'apex-committee': ['Apex Committee', 'உச்சக் குழு', 'അപെക്സ് കമ്മിറ്റി'],
+      'core-committee': ['Core Committee', 'முக்கியக் குழு', 'കോർ കമ്മിറ്റി']
+    };
+    var categoryNames = categoryLabels[member.category];
+    var groupName = categoryNames ? categoryNames[0] : ((member.group === 'apex' || member.group_type === 'apex') ? 'Apex Committee' : 'Present Committee');
+    var groupNameTa = categoryNames ? categoryNames[1] : ((member.group === 'apex' || member.group_type === 'apex') ? 'உச்ச குழு' : 'தற்போதைய குழு');
+    var groupNameMl = categoryNames ? categoryNames[2] : ((member.group === 'apex' || member.group_type === 'apex') ? 'മുൻനിര സമിതി' : 'നിലവിലെ സമിതി');
     var curLang = document.documentElement.lang || 'en';
 
     nameEl.setAttribute('data-en', nameEn);

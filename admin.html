@@ -317,20 +317,25 @@
         <div class="admin-section-head">
           <div>
             <h2>Board of Trustees &amp; Committee</h2>
-            <p>Manage all 54 Apex &amp; Present Committee members and maintain family/gothram/rasi profiles.</p>
+            <p>Manage member profiles, photographs, categories, display order, and publication status.</p>
           </div>
           <button type="button" id="addMemberBtn" class="btn btn-primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Add Member</span>
+            <span>ADD MEMBER</span>
           </button>
         </div>
 
         <!-- Filter bar -->
         <div class="admin-toolbar">
           <div class="admin-filter-group">
-            <button type="button" id="memberFilterAll" class="btn btn-outline btn-sm active">All Members</button>
-            <button type="button" id="memberFilterApex" class="btn btn-outline btn-sm">Apex Committee</button>
-            <button type="button" id="memberFilterPresent" class="btn btn-outline btn-sm">Present Committee</button>
+            <select id="memberFilterCategory" class="form-control" aria-label="Filter members by category">
+              <option value="all">All Categories</option>
+              <option value="office-bearers">Office Bearers</option>
+              <option value="life-member">Life Member</option>
+              <option value="member">Member</option>
+              <option value="apex-committee">Apex Committee</option>
+              <option value="core-committee">Core Committee</option>
+            </select>
           </div>
           <div class="admin-search-wrap">
             <input type="text" id="memberSearch" class="form-control" placeholder="Search by name or role...">
@@ -342,11 +347,11 @@
             <table class="admin-table admin-table-cards">
               <thead>
                 <tr>
-                  <th>Member Name</th>
-                  <th>Designation / Role</th>
-                  <th>Committee Group</th>
+                  <th>Photo / Member Name</th>
+                  <th>Designation</th>
+                  <th>Category</th>
+                  <th>Display Order</th>
                   <th>Status</th>
-                  <th>Gothram / Rasi</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -622,19 +627,19 @@
           
           <div class="form-grid-2">
             <div class="form-group">
-              <label for="memberNameEn">Full Name (English) *</label>
-              <input type="text" id="memberNameEn" class="form-control" placeholder="e.g. Shri S Chandrasekaran" required>
+              <label for="memberNameEn">Full Name *</label>
+              <input type="text" id="memberNameEn" class="form-control" placeholder="Enter the member's full name" required>
             </div>
             <div class="form-group">
               <label for="memberNameTa">Full Name (Tamil)</label>
-              <input type="text" id="memberNameTa" class="form-control" placeholder="e.g. திரு எஸ் சந்திரசேகரன்">
+              <input type="text" id="memberNameTa" class="form-control" placeholder="Enter the member's name in Tamil">
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label for="memberRoleEn">Designation / Role (EN) *</label>
-              <input type="text" id="memberRoleEn" class="form-control" placeholder="e.g. Founder and President / Life Member" required>
+              <label for="memberRoleEn">Designation</label>
+              <input type="text" id="memberRoleEn" class="form-control" placeholder="Optional designation or position">
             </div>
             <div class="form-group">
               <label for="memberRoleTa">Designation / Role (TA)</label>
@@ -644,22 +649,30 @@
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label for="memberGroupType">Committee Group *</label>
+              <label for="memberGroupType">Category *</label>
               <select id="memberGroupType" class="form-control" required>
-                <option value="apex">Apex Committee</option>
-                <option value="present">Present Committee</option>
+                <option value="">Select category</option>
+                <option value="office-bearers">Office Bearers</option>
+                <option value="life-member">Life Member</option>
+                <option value="member">Member</option>
+                <option value="apex-committee">Apex Committee</option>
+                <option value="core-committee">Core Committee</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="memberInitials">Avatar Initials <span class="hint">(e.g. SC)</span></label>
-              <input type="text" id="memberInitials" class="form-control" placeholder="SC" maxlength="4">
+              <label for="memberInitials">Avatar Initials <span class="hint">(optional)</span></label>
+              <input type="text" id="memberInitials" class="form-control" placeholder="Optional initials" maxlength="4">
             </div>
           </div>
 
           <div class="form-group">
-            <label for="memberIdField">Profile Slug / ID <span class="hint">(used in trustee.html?id=...)</span></label>
-            <input type="text" id="memberIdField" class="form-control" placeholder="e.g. shri-s-chandrasekaran" required>
+            <label for="memberPhotoFile">Profile Photo *</label>
+            <input type="file" id="memberPhotoFile" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            <small class="form-note">JPG, JPEG, PNG, or WebP; maximum 5 MB.</small>
+            <img id="memberPhotoPreview" alt="Member photo preview" style="display:none; width:120px; height:140px; object-fit:cover; border-radius:8px; border:1px solid var(--admin-line); margin-top:10px;">
+            <div id="memberPhotoEmpty" class="form-note">No photo selected.</div>
           </div>
+          <input type="hidden" id="memberIdField">
 
           <div style="background:var(--admin-cream); border:1px solid var(--admin-line); border-radius:10px; padding:16px;">
             <div style="font-weight:700; font-size:13px; color:var(--admin-maroon); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.04em;">Individual Profile Details (trustee.html)</div>
@@ -672,17 +685,17 @@
             <div class="form-grid-2">
               <div class="form-group">
                 <label for="memberGothram">Gothram</label>
-                <input type="text" id="memberGothram" class="form-control" placeholder="e.g. Koushika">
+                <input type="text" id="memberGothram" class="form-control" placeholder="Enter Gothram">
               </div>
               <div class="form-group">
                 <label for="memberStar">Nakshatram / Star</label>
-                <input type="text" id="memberStar" class="form-control" placeholder="e.g. Uthirattathi">
+                <input type="text" id="memberStar" class="form-control" placeholder="Enter Nakshatram or Star">
               </div>
             </div>
 
             <div class="form-group" style="margin-top:12px;">
               <label for="memberRasi">Rasi</label>
-              <input type="text" id="memberRasi" class="form-control" placeholder="e.g. Meenam">
+              <input type="text" id="memberRasi" class="form-control" placeholder="Enter Rasi">
             </div>
           </div>
 
@@ -696,14 +709,14 @@
             <div class="form-group">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                 <input type="checkbox" id="memberActive" checked style="width:16px;height:16px;">
-                <span>Active Member (Visible Publicly)</span>
+                <span>Published / Active (Visible Publicly)</span>
               </label>
             </div>
           </div>
 
           <div class="form-group">
             <label for="memberDisplayOrder">Display Order</label>
-            <input type="number" id="memberDisplayOrder" class="form-control" value="0">
+            <input type="number" id="memberDisplayOrder" class="form-control" min="0" step="1" value="0">
           </div>
         </div>
 
@@ -720,7 +733,6 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="assets/trustees-data.js"></script>
   <script src="assets/supabase-config.js"></script>
   <script src="assets/supabase-client.js"></script>
   <script src="assets/admin.js"></script>

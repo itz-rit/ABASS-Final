@@ -701,13 +701,13 @@
 
       <div class="trust-tabs-grid">
         <div>
-          <div class="trustee-role-tabs" role="tablist" aria-label="Trustee roles">
-            <button type="button" class="trustee-role-tab" role="tab" aria-selected="false" data-role-filter="president" data-en="President / Founder" data-ta="தலைவர் / நிறுவனர்">President / Founder</button>
-            <button type="button" class="trustee-role-tab" role="tab" aria-selected="false" data-role-filter="secretary" data-en="Secretary" data-ta="செயலாளர்">Secretary</button>
-            <button type="button" class="trustee-role-tab" role="tab" aria-selected="false" data-role-filter="life-member" data-en="Life Member" data-ta="வாழ்நாள் உறுப்பினர்">Life Member</button>
-            <button type="button" class="trustee-role-tab" role="tab" aria-selected="false" data-role-filter="member" data-en="Member" data-ta="உறுப்பினர்">Member</button>
+          <div class="trustee-role-tabs" aria-label="Trustee categories">
+            <a class="trustee-role-tab" href="members-office-bearers.html" data-en="Office Bearers" data-ta="நிர்வாகிகள்">Office Bearers</a>
+            <a class="trustee-role-tab" href="members-life-member.html" data-en="Life Member" data-ta="வாழ்நாள் உறுப்பினர்">Life Member</a>
+            <a class="trustee-role-tab" href="members.html" data-en="Member" data-ta="உறுப்பினர்">Member</a>
+            <a class="trustee-role-tab" href="members-apex-committee.html" data-en="Apex Committee" data-ta="உச்சக் குழு">Apex Committee</a>
+            <a class="trustee-role-tab" href="members-core-committee.html" data-en="Core Committee" data-ta="முக்கியக் குழு">Core Committee</a>
           </div>
-          <div class="trustee-list"></div>
         </div>
         <div class="docs-panel">
           <div class="doc-row">
@@ -728,51 +728,6 @@
       </div>
     </div>
   </section>
-
-  <script>
-  (function(){
-    var tabs = document.querySelectorAll('.trustee-role-tab');
-    var memberList = document.querySelector('.trustee-list');
-    var members = [
-      { role: 'president', initials: 'SC', roleEn: 'President / Founder', roleTa: 'தலைவர் / நிறுவனர்', roleMl: 'പ്രസിഡന്റ് / സ്ഥാപകൻ', name: 'S. Chandrasekaran' },
-      { role: 'secretary', initials: 'KJ', roleEn: 'Secretary', roleTa: 'செயலாளர்', roleMl: 'സെക്രട്ടറി', name: 'K. Jayarama Krishnan' },
-      { role: 'life-member', initials: 'KJ', roleEn: 'Life Member', roleTa: 'வாழ்நாள் உறுப்பினர்', roleMl: 'ആജീവനാന്ത അംഗം', name: 'K. Jayamohan' },
-      { role: 'life-member', initials: 'TG', roleEn: 'Life Member', roleTa: 'வாழ்நாள் உறுப்பினர்', roleMl: 'ആജീവനാന്ത അംഗം', name: 'T.G. Narayana Swamy' },
-      { role: 'life-member', initials: 'EG', roleEn: 'Life Member', roleTa: 'வாழ்நாள் உறுப்பினர்', roleMl: 'ആജീവനാന്ത അംഗം', name: 'E. Ganesh Kumar' },
-      { role: 'member', initials: 'JH', roleEn: 'Member', roleTa: 'உறுப்பினர்', roleMl: 'അംഗം', name: 'J. Hariharaprasath' },
-      { role: 'member', initials: 'RP', roleEn: 'Member', roleTa: 'உறுப்பினர்', roleMl: 'അംഗം', name: 'Radhakrishnan Palani' },
-      { role: 'member', initials: 'VM', roleEn: 'Member', roleTa: 'உறுப்பினர்', roleMl: 'അംഗം', name: 'V. Manikandan (Sathya)' }
-    ];
-    if(!tabs.length || !memberList) return;
-    var selectedRole = null;
-
-    function showRole(role){
-      tabs.forEach(function(tab){
-        var active = tab.getAttribute('data-role-filter') === role;
-        tab.classList.toggle('active', active);
-        tab.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      memberList.innerHTML = '';
-      if(!role) return;
-
-      members.filter(function(member){ return member.role === role; }).forEach(function(member){
-        memberList.insertAdjacentHTML('beforeend',
-          '<div class="trustee-card"><div class="avatar">' + member.initials + '</div><div><div class="role" data-en="' + member.roleEn + '" data-ta="' + member.roleTa + '" data-ml="' + member.roleMl + '">' + member.roleEn + '</div><div class="name">' + member.name + '</div></div></div>'
-        );
-      });
-      if(window.applyLang){ window.applyLang(window.currentLang || 'en', true); }
-    }
-
-    tabs.forEach(function(tab){
-      tab.addEventListener('click', function(){
-        var clickedRole = tab.getAttribute('data-role-filter');
-        selectedRole = clickedRole === selectedRole ? null : clickedRole;
-        showRole(selectedRole);
-      });
-    });
-    showRole('');
-  })();
-  </script>
 
   <!-- CONNECT SECTION -->
   <section id="connect" class="section">

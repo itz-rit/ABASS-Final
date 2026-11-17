@@ -66,13 +66,14 @@ create table if not exists public.gallery_items (
 
 -- D. MEMBERS (TRUSTEES & COMMITTEE) TABLE
 create table if not exists public.members (
-  id text primary key,
+  id text primary key default gen_random_uuid()::text,
   name_en text not null,
   name_ta text,
-  role_en text not null,
+  role_en text,
   role_ta text,
   group_type text not null check (group_type in ('apex', 'present')),
-  initials text not null,
+  category text,
+  initials text not null default '',
   featured boolean not null default false,
   active boolean not null default true,
   display_order integer not null default 0,
@@ -81,9 +82,26 @@ create table if not exists public.members (
   nakshatram_star text,
   rasi text,
   photo_url text,
+  photo_path text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.members add column if not exists category text;
+alter table public.members add column if not exists photo_path text;
+alter table public.members alter column id set default gen_random_uuid()::text;
+alter table public.members alter column role_en drop not null;
+alter table public.members alter column initials set default '';
+alter table public.members alter column group_type set default 'present';
+
+-- Remove the preloaded member records; future member records come from the Admin Panel.
+delete from public.members where category is null;
+
+alter table public.members alter column category set not null;
+alter table public.members drop constraint if exists members_category_check;
+alter table public.members
+  add constraint members_category_check
+  check (category in ('office-bearers', 'life-member', 'member', 'apex-committee', 'core-committee'));
 
 -- ============================================================
 -- 3. HELPER FUNCTION & ROW LEVEL SECURITY (RLS)
@@ -173,6 +191,13 @@ insert into storage.buckets (id, name, public)
 values ('gallery', 'gallery', true)
 on conflict (id) do update set public = true;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('member-photos', 'member-photos', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+set public = true,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
 -- Storage policies
 drop policy if exists "Public can read gallery bucket" on storage.objects;
 create policy "Public can read gallery bucket"
@@ -197,6 +222,31 @@ create policy "Admins can delete from gallery bucket"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'gallery' and public.is_admin());
+
+drop policy if exists "Public can read member photos" on storage.objects;
+create policy "Public can read member photos"
+  on storage.objects for select
+  to anon, authenticated
+  using (bucket_id = 'member-photos');
+
+drop policy if exists "Admins can upload member photos" on storage.objects;
+create policy "Admins can upload member photos"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'member-photos' and public.is_admin());
+
+drop policy if exists "Admins can update member photos" on storage.objects;
+create policy "Admins can update member photos"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'member-photos' and public.is_admin())
+  with check (bucket_id = 'member-photos' and public.is_admin());
+
+drop policy if exists "Admins can delete member photos" on storage.objects;
+create policy "Admins can delete member photos"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'member-photos' and public.is_admin());
 
 -- ============================================================
 -- 5. SEED DATA MIGRATION
@@ -281,547 +331,7 @@ values ('Annual Padi & Vilakku Pooja Notice', 'ஆண்டு படி பூ�
 insert into public.gallery_items (title_en, title_ta, description_en, description_ta, category, badge_en, badge_ta, image_path, image_url, published, display_order)
 values ('Grand Congregation & Prasadam', 'மகா சங்கமம் & பிரசாதம் வழங்குதல்', 'Hundreds of devotees receiving sacred prasadam and Annadhaanam after completion of Mahapooja.', 'மகாபூஜை நிறைவடைந்த பின் புனித பிரசாதம் மற்றும் அன்னதானம் பெறும் நூற்றுக்கணக்கான பக்தர்கள்.', 'annadhaanam', 'Annadhaanam', 'அன்னதானம்', NULL, 'assets/images/gallery-16.jpg', true, 16);
 
--- Seed Members (54 existing trustees & committee members)
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-s-chandrasekaran', 'Shri S Chandrasekaran', NULL, 'Founder and President / Life Member', NULL, 'apex', 'SC', true, true, 1)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-p-dharmaraj', 'Shri P Dharmaraj', NULL, 'Vice President / Life Member', NULL, 'apex', 'PD', true, true, 2)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-k-jayaramakrishnan', 'Shri K Jayaramakrishnan', NULL, 'Secretary / Life Member', NULL, 'apex', 'KJ', true, true, 3)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-c-v-manikandan', 'Shri C V Manikandan', NULL, 'Joint Secretary / Life Member', NULL, 'apex', 'CV', true, true, 4)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-t-l-arun-prasath', 'Shri T L Arun Prasath', NULL, 'Treasurer / Life Member', NULL, 'apex', 'TL', true, true, 5)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-late-v-h-shankaran', 'Shri (Late) V H Shankaran', NULL, 'Emeritus Member', NULL, 'apex', 'VH', false, true, 6)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-c-g-vasanthakumar', 'Shri C G Vasanthakumar', NULL, 'Life Member', NULL, 'apex', 'CG', false, true, 7)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-k-jayamohan', 'Shri K Jayamohan', NULL, 'Life Member', NULL, 'apex', 'KJ', false, true, 8)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-k-jayakumar', 'Shri K Jayakumar', NULL, 'Legal Advisor / Life Member', NULL, 'apex', 'KJ', false, true, 9)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-a-srinivasan', 'Shri A Srinivasan', NULL, 'Electoral Member / Life Member', NULL, 'apex', 'AS', false, true, 10)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-t-l-hariharan', 'Shri T L Hariharan', NULL, 'Life Member', NULL, 'apex', 'TL', false, true, 11)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-j-harihara-prasad', 'Shri J Harihara Prasad', NULL, 'Life Member', NULL, 'apex', 'JH', false, true, 12)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-muralidharan', 'Shri Muralidharan', NULL, 'Life Member', NULL, 'apex', 'M', false, true, 13)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-p-radhakrishnan', 'Shri P Radhakrishnan', NULL, 'Life Member', NULL, 'apex', 'PR', false, true, 14)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-manikandan-sathya', 'Shri Manikandan (Sathya)', NULL, 'Life Member', NULL, 'apex', 'MS', false, true, 15)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-e-ganesh-kumar', 'Shri E Ganesh Kumar', NULL, 'Life Member', NULL, 'apex', 'EG', false, true, 16)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-t-g-narayanaswamy', 'Shri T G Narayanaswamy', NULL, 'Life Member', NULL, 'apex', 'TG', false, true, 17)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-r-arunkumar', 'Shri R Arunkumar', NULL, 'Life Member', NULL, 'apex', 'RA', false, true, 18)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-s-rajesh', 'Shri S Rajesh', NULL, 'Life Member', NULL, 'apex', 'SR', false, true, 19)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-sivasakthi', 'Shri Sivasakthi', NULL, 'Member', NULL, 'present', 'S', false, true, 20)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-murugan-mestri', 'Shri Murugan (Mestri)', NULL, 'Member', NULL, 'present', 'MM', false, true, 21)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-j-rahul', 'Shri J Rahul', NULL, 'Member', NULL, 'present', 'JR', false, true, 22)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-sreekumar', 'Shri Sreekumar', NULL, 'Member', NULL, 'present', 'S', false, true, 23)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-e-baskaran', 'Shri E Baskaran', NULL, 'Member', NULL, 'present', 'EB', false, true, 24)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-hemanth-c-sekar', 'Shri Hemanth C Sekar', NULL, 'Member', NULL, 'present', 'HC', false, true, 25)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-sumanth-c-sekar', 'Shri Sumanth C Sekar', NULL, 'Member', NULL, 'present', 'SC', false, true, 26)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-murali', 'Shri Murali', NULL, 'Member', NULL, 'present', 'M', false, true, 27)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-srinath', 'Shri Srinath', NULL, 'Member', NULL, 'present', 'S', false, true, 28)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-subramani', 'Shri Subramani', NULL, 'Member', NULL, 'present', 'S', false, true, 29)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-elangovan', 'Shri Elangovan', NULL, 'Member', NULL, 'present', 'E', false, true, 30)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-s-vadivel', 'Shri S Vadivel', NULL, 'Member', NULL, 'present', 'SV', false, true, 31)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-srinivasan', 'Shri Srinivasan', NULL, 'Member', NULL, 'present', 'S', false, true, 32)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-senthil-kumar', 'Shri Senthil kumar', NULL, 'Member', NULL, 'present', 'SK', false, true, 33)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-ramesh-krishna-store', 'Shri Ramesh (Krishna store)', NULL, 'Member', NULL, 'present', 'RK', false, true, 34)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-rameshkumar', 'Shri Rameshkumar', NULL, 'Member', NULL, 'present', 'R', false, true, 35)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-nithiyanandam', 'Shri Nithiyanandam', NULL, 'Member', NULL, 'present', 'N', false, true, 36)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-c-r-balaji', 'Shri C R Balaji', NULL, 'Member', NULL, 'present', 'CR', false, true, 37)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-venkadesh', 'Shri Venkadesh', NULL, 'Member', NULL, 'present', 'V', false, true, 38)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-arun', 'Shri Arun', NULL, 'Member', NULL, 'present', 'A', false, true, 39)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-t-prakashkumar', 'Shri T Prakashkumar', NULL, 'Member', NULL, 'present', 'TP', false, true, 40)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-g-suresh-kumar', 'Shri G Suresh Kumar', NULL, 'Member', NULL, 'present', 'GS', false, true, 41)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-l-venkatensan', 'Shri L Venkatensan', NULL, 'Member', NULL, 'present', 'LV', false, true, 42)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-m-ganesan', 'Shri M Ganesan', NULL, 'Member', NULL, 'present', 'MG', false, true, 43)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-k-r-narayanan', 'Shri K R Narayanan', NULL, 'Member', NULL, 'present', 'KR', false, true, 44)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-punithavel', 'Shri Punithavel', NULL, 'Member', NULL, 'present', 'P', false, true, 45)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-satiyaseelan', 'Shri Satiyaseelan', NULL, 'Member', NULL, 'present', 'S', false, true, 46)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-mohanakrishnan', 'Shri Mohanakrishnan', NULL, 'Member', NULL, 'present', 'M', false, true, 47)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-c-vijaykumar', 'Shri C Vijaykumar', NULL, 'Member', NULL, 'present', 'CV', false, true, 48)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-padmini', 'Shri Padmini', NULL, 'Member', NULL, 'present', 'P', false, true, 49)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-praveen-kumar', 'Shri Praveen Kumar', NULL, 'Member', NULL, 'present', 'PK', false, true, 50)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-mahindran', 'Shri Mahindran', NULL, 'Member', NULL, 'present', 'M', false, true, 51)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-a-r-sharavanan', 'Shri A R.Sharavanan', NULL, 'Member', NULL, 'present', 'AR', false, true, 52)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-sharath', 'Shri Sharath', NULL, 'Member', NULL, 'present', 'S', false, true, 53)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
-insert into public.members (id, name_en, name_ta, role_en, role_ta, group_type, initials, featured, active, display_order)
-values ('shri-parthasarathy-bobby', 'Shri Parthasarathy (Bobby)', NULL, 'Member', NULL, 'present', 'PB', false, true, 54)
-on conflict (id) do update set
-  name_en = excluded.name_en,
-  role_en = excluded.role_en,
-  group_type = excluded.group_type,
-  initials = excluded.initials,
-  featured = excluded.featured,
-  active = excluded.active,
-  display_order = excluded.display_order;
+-- Member seed records removed; create members through the Admin Panel.
 
 -- ============================================================
 -- 6. HOW TO REGISTER FIRST ADMIN USER:

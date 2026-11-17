@@ -11,6 +11,11 @@ Pages:
 - donations.html — Donations & Causes
 - media.html — Media
 - transparency.html — Board of Trustees & Trust Records
+- members-office-bearers.html — Office Bearers
+- members-life-member.html — Life Members
+- members.html — Members
+- members-apex-committee.html — Apex Committee
+- members-core-committee.html — Core Committee
 - contact.html — Connect + WhatsApp enquiry form
 
 Shared assets:
@@ -18,6 +23,12 @@ Shared assets:
 - assets/script.js
 
 The English/Tamil switch is retained from the source page. The contact enquiry form opens WhatsApp using the configured ABASS contact number.
+
+Member profiles are managed in the existing Admin Portal under Trustees & Committee.
+Run the updated supabase-schema.sql in Supabase SQL Editor before using this
+workflow. It provisions the member-photo storage bucket and clears old member
+records without a category so the public pages start empty; add new profiles
+through the Admin Panel.
 
 Run locally by opening index.html or serving this folder with any static web server.
 

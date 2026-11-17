@@ -1,7 +1,7 @@
 /**
  * ABASS — Supabase Client & Unified Data Service
  * Single source of truth for Events, Gallery, and Trustees.
- * Automatically falls back to embedded defaults when offline or pending setup.
+ * Public member records are loaded from Supabase; no member profiles are embedded.
  */
 
 (function () {
@@ -167,106 +167,106 @@
     getMembers: async function (opts) {
       opts = opts || {};
       var group = opts.group || 'all';
+      var category = opts.category || null;
 
-      if (client) {
-        try {
-          var query = client
-            .from('members')
-            .select('*')
-            .eq('active', true)
-            .order('display_order', { ascending: true });
+      if (!client) return { data: [], fromFallback: false, error: null };
 
-          if (group !== 'all') {
-            query = query.eq('group_type', group);
-          }
+      try {
+        var query = client
+          .from('members')
+          .select('*')
+          .eq('active', true)
+          .order('display_order', { ascending: true })
+          .order('name_en', { ascending: true });
 
-          var res = await query;
-          if (!res.error && res.data && res.data.length > 0) {
-            // Map group_type back to group for backwards compatibility
-            var mapped = res.data.map(function (m) {
-              return {
-                id: m.id,
-                name: m.name_en,
-                name_en: m.name_en,
-                name_ta: m.name_ta,
-                role: m.role_en,
-                role_en: m.role_en,
-                role_ta: m.role_ta,
-                group: m.group_type,
-                group_type: m.group_type,
-                initials: m.initials,
-                featured: !!m.featured,
-                family_members: m.family_members,
-                gothram: m.gothram,
-                nakshatram_star: m.nakshatram_star,
-                rasi: m.rasi,
-                photo_url: m.photo_url
-              };
-            });
-            return { data: mapped, fromFallback: false };
-          }
-        } catch (err) {
-          console.warn('ABASS: Supabase fetch members error, using fallback:', err);
+        if (category) {
+          query = query.eq('category', category);
+        } else if (group !== 'all') {
+          query = query.eq('group_type', group);
         }
-      }
 
-      // Fallback to window.ABASS_TRUSTEES
-      var raw = window.ABASS_TRUSTEES || [];
-      if (group !== 'all') {
-        raw = raw.filter(function (m) {
-          return m.group === group;
+        var res = await query;
+        if (res.error) {
+          console.error('ABASS: Supabase fetch members error:', res.error);
+          return { data: [], fromFallback: false, error: res.error };
+        }
+
+        var mapped = (res.data || []).map(function (m) {
+          return {
+            id: m.id,
+            name: m.name_en,
+            name_en: m.name_en,
+            name_ta: m.name_ta,
+            role: m.role_en,
+            role_en: m.role_en,
+            role_ta: m.role_ta,
+            category: m.category,
+            group: m.group_type,
+            group_type: m.group_type,
+            initials: m.initials,
+            featured: !!m.featured,
+            family_members: m.family_members,
+            gothram: m.gothram,
+            nakshatram_star: m.nakshatram_star,
+            rasi: m.rasi,
+            photo_url: m.photo_url,
+            photo_path: m.photo_path
+          };
         });
+        return { data: mapped, fromFallback: false, error: null };
+      } catch (err) {
+        console.error('ABASS: Supabase fetch members error:', err);
+        return { data: [], fromFallback: false, error: err };
       }
-      return { data: raw, fromFallback: true };
     },
 
     // --- SINGLE MEMBER BY ID ---
     getMemberById: async function (id) {
       if (!id) return { data: null, error: 'No ID provided' };
+      if (!client) return { data: null, fromFallback: false, error: null };
 
-      if (client) {
-        try {
-          var res = await client
-            .from('members')
-            .select('*')
-            .eq('id', id)
-            .single();
+      try {
+        var res = await client
+          .from('members')
+          .select('*')
+          .eq('id', id)
+          .eq('active', true)
+          .maybeSingle();
 
-          if (!res.error && res.data) {
-            var m = res.data;
-            return {
-              data: {
-                id: m.id,
-                name: m.name_en,
-                name_en: m.name_en,
-                name_ta: m.name_ta,
-                role: m.role_en,
-                role_en: m.role_en,
-                role_ta: m.role_ta,
-                group: m.group_type,
-                group_type: m.group_type,
-                initials: m.initials,
-                featured: !!m.featured,
-                family_members: m.family_members,
-                gothram: m.gothram,
-                nakshatram_star: m.nakshatram_star,
-                rasi: m.rasi,
-                photo_url: m.photo_url
-              },
-              fromFallback: false
-            };
-          }
-        } catch (err) {
-          console.warn('ABASS: Supabase member profile fetch error:', err);
+        if (res.error) {
+          console.error('ABASS: Supabase member profile fetch error:', res.error);
+          return { data: null, fromFallback: false, error: res.error };
         }
-      }
 
-      // Fallback
-      var raw = window.ABASS_TRUSTEES || [];
-      var found = raw.filter(function (m) {
-        return m.id === id;
-      })[0] || null;
-      return { data: found, fromFallback: true };
+        var m = res.data;
+        return {
+          data: m ? {
+            id: m.id,
+            name: m.name_en,
+            name_en: m.name_en,
+            name_ta: m.name_ta,
+            role: m.role_en,
+            role_en: m.role_en,
+            role_ta: m.role_ta,
+            category: m.category,
+            group: m.group_type,
+            group_type: m.group_type,
+            initials: m.initials,
+            featured: !!m.featured,
+            family_members: m.family_members,
+            gothram: m.gothram,
+            nakshatram_star: m.nakshatram_star,
+            rasi: m.rasi,
+            photo_url: m.photo_url,
+            photo_path: m.photo_path
+          } : null,
+          fromFallback: false,
+          error: null
+        };
+      } catch (err) {
+        console.error('ABASS: Supabase member profile fetch error:', err);
+        return { data: null, fromFallback: false, error: err };
+      }
     }
   };
 })();
